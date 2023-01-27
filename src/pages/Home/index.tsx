@@ -35,7 +35,7 @@ const newCycleFormValidationSchema = zod.object({
   task: zod.string().min(1, 'informe a tarefa'),
   minutesAmount: zod
     .number()
-    .min(5, 'o tempo mínimo é de 5 minutos')
+    .min(1, 'o tempo mínimo é de 5 minutos')
     .max(60, 'o tempo máximo é de 60 minutos'),
 })
 
@@ -53,6 +53,7 @@ interface Cycle {
   minutesAmount: number
   startDate: Date
   interruptedDate?: Date
+  finishedDate?: Date
 }
 
 export function Home() {
@@ -70,20 +71,45 @@ export function Home() {
 
   const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId)
 
+  /*
+    1. Se o ciclo estiver ativo, o total de segundos é o total de minutos do ciclo * 60
+    2. Se o ciclo estiver ativo, os segundos atuais é o total de segundos - os segundos passados
+  */
+  const totalSeconds = activeCycle ? activeCycle.minutesAmount * 60 : 0
+  const currentSeconds = activeCycle ? totalSeconds - amountSecondsPassed : 0
+
   useEffect(() => {
     let interval: number
+
     if (activeCycle) {
       interval = setInterval(() => {
-        setAmountSecondsPassed(
-          differenceInSeconds(new Date(), activeCycle.startDate)
+        const secondsDifference = differenceInSeconds(
+          new Date(),
+          activeCycle.startDate
         )
+        if (secondsDifference >= totalSeconds) {
+          setCycles((state) =>
+            state.map((cycle) => {
+              if (cycle.id === activeCycleId) {
+                return { ...cycle, finishedDate: new Date() }
+              } else {
+                return cycle
+              }
+            })
+          )
+          setAmountSecondsPassed(totalSeconds)
+
+          clearInterval(interval)
+        } else {
+          setAmountSecondsPassed(secondsDifference)
+        }
       }, 1000)
     }
     return () => {
       clearInterval(interval)
       setAmountSecondsPassed(0)
     }
-  }, [activeCycle])
+  }, [activeCycle, totalSeconds, activeCycleId])
 
   function handleCreateNewCycle(data: NewCycleFormData) {
     const id = new Date().getTime()
@@ -102,9 +128,8 @@ export function Home() {
   }
 
   function handleInterruptCycle() {
-    setActiveCycleId(null)
-    setCycles(
-      cycles.map((cycle) => {
+    setCycles((state) =>
+      state.map((cycle) => {
         if (cycle.id === activeCycleId) {
           return {
             ...cycle,
@@ -115,14 +140,8 @@ export function Home() {
         }
       })
     )
+    setActiveCycleId(null)
   }
-
-  /*
-    1. Se o ciclo estiver ativo, o total de segundos é o total de minutos do ciclo * 60
-    2. Se o ciclo estiver ativo, os segundos atuais é o total de segundos - os segundos passados
-    */
-  const totalSeconds = activeCycle ? activeCycle.minutesAmount * 60 : 0
-  const currentSeconds = activeCycle ? totalSeconds - amountSecondsPassed : 0
 
   /*
     3. Se o ciclo estiver ativo, os minutos atuais é o total de segundos atuais / 60
@@ -171,7 +190,7 @@ export function Home() {
             placeholder="00"
             disabled={!!activeCycle}
             step={5}
-            min={5}
+            min={1}
             max={60}
             {...register('minutesAmount', { valueAsNumber: true })}
           />
