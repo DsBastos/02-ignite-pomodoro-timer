@@ -54,6 +54,11 @@ export function Home() {
   // Desestruturação ⬇️
   const { handleSubmit, watch, reset } = newCycleForm
 
+  function handleCreateNewCycle(data: NewCycleFormData) {
+    createNewCycle(data)
+    reset()
+  }
+
   const task = watch('task')
   const isSubmitDisabled = !task
 
@@ -69,7 +74,7 @@ export function Home() {
 
   return (
     <HomeContainer>
-      <form onSubmit={handleSubmit(createNewCycle)} action="">
+      <form onSubmit={handleSubmit(handleCreateNewCycle)} action="">
         {/* 
             {...newCycleForm} é um "spread", 
             pega cada uma das propriedades do "newCycleForm" 
